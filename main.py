@@ -15,7 +15,6 @@ def about():
                 "name": "Егор",
                 "last_name": "Ксенофонтов",
                 "groupe": "323901"
-
             }""")
 
 @app.get("/rnd")
@@ -39,8 +38,8 @@ def get_all_products(db: Session = Depends(get_db)):
 
 @app.get("/student", response_model=list[pyd.BaseStudent])
 def get_all_students(db: Session = Depends(get_db)):
-    student = db.query(m.Student).all()
-    return student
+    students = db.query(m.Student).all()
+    return students
 
 @app.get("/product/{product_id}")
 def get_product(product_id: int, db: Session = Depends(get_db)):
@@ -78,6 +77,8 @@ def create_student(student: pyd.CreateStudent, db: Session = Depends(get_db)):
         raise HTTPException(400, "Такой студент уже есть")
     student_db = m.Student()
     student_db.name = student.name
+    student_db.last_name = student.last_name
+    student_db.age = student.age
 
     db.add(student_db)
     db.commit()

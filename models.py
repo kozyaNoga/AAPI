@@ -14,9 +14,9 @@ class Product(Base): #N
 class Student(Base):
     __tablename__="students"
     id = Column(Integer, primary_key=True, autoincrement=True)
-    name = Column(String(255), unique=True)
-    last_name = Column(String(255), unique=True)
-    age = Column(Integer, unique=True)
+    name = Column(String(255), nullable=False)
+    last_name = Column(String(255), nullable=False)
+    age = Column(Integer, nullable=False)
 
 class Category(Base): #1
     __tablename__="categories"

@@ -1,108 +1,76 @@
-from fastapi import FastAPI, HTTPException, Depends
+from fastapi import FastAPI, HTTPException, Depends, UploadFile
+import models
 from database import get_db
 from sqlalchemy.orm import Session
 import models as m
 from typing import List
 import pyd
-import json, random
-
+import shutil
+from fastapi.staticfiles import StaticFiles
 app = FastAPI()
 
-@app.get("/about")
-def about():
-    return json.loads(
-        """{
-                "name": "Егор",
-                "last_name": "Ксенофонтов",
-                "groupe": "323901"
-            }""")
+@app.get("/movies", response_model=list[pyd.BaseMovie])
+def get_all_movies(db: Session = Depends(get_db)):
+    movies = db.query(m.Movie).all()
+    return movies
 
-@app.get("/rnd")
-def rnd():
-    return random.randint(1, 10)
+@app.get("/movie/{movie_id}")
+def get_movie(movie_id: int, db: Session = Depends(get_db)):
+    movie = db.query(m.Movie).filter(m.Movie.id == movie_id).first()
+    if not movie:
+        raise HTTPException(404, "Фильм не найден")
+    return movie
 
-@app.post("/t_square" )
-def t_square(a: int, b: int, c: int):
-    if a <= 0 or b <= 0 or c <= 0:
-        raise HTTPException(404, "Одна из сторон меньше нуля")
-    if a >= b + c or c >= b + a or b >= a + c:
-        raise HTTPException(404, "Такого треугольника не существует")
-    p = (a + b + c)/2
-    s = (p*(p-a)*(p-b)*(p-c))**(1/2)
-    return s
+@app.post("/movie")
+def create_movie(movie: pyd.CreateMovie, db: Session = Depends(get_db)):
+    movie_db=db.query(m.Movie).filter(
+        m.Movie.name == movie.name, 
+        m.Movie.primiere == movie.primiere,
+        m.Movie.genre_id == movie.genre_id,
+        m.Movie.duration == movie.duration,
+        m.Movie.rate == movie.rate,
+        m.Movie.poster_image == movie.poster_image,
+        m.Movie.date_added == movie.date_added,
+    ).first()
 
-@app.get("/product", response_model=list[pyd.BaseProduct])
-def get_all_products(db: Session = Depends(get_db)):
-    products = db.query(m.Product).all()
-    return products
+    genre_db = db.query(m.Genre).filter(m.Genre.id == movie.genre_id).first()
+    if not genre_db:
+        raise HTTPException(400, "Нет такой категории")
+    if movie_db:
+        raise HTTPException(400, "Такой фильм уже есть")
+    movie_db = m.Movie()
+    movie_db.name = movie.name 
+    movie_db.primiere = movie.primiere
+    movie_db.genre = genre_db
+    movie_db.duration = movie.duration
+    movie_db.rate = movie.rate
+    movie_db.poster_image = movie.poster_image
+    movie_db.date_added = movie.date_added
 
-@app.get("/student", response_model=list[pyd.BaseStudent])
-def get_all_students(db: Session = Depends(get_db)):
-    students = db.query(m.Student).all()
-    return students
-
-@app.get("/product/{product_id}")
-def get_product(product_id: int, db: Session = Depends(get_db)):
-    product = db.query(m.Product).filter(m.Product.id == product_id).first()
-    if not product:
-        raise HTTPException(404, "Товар не найден")
-    return product
-
-@app.post("/product")
-def create_product(product: pyd.CreateProduct, db: Session = Depends(get_db)):
-    product_db=db.query(m.Product).filter(m.Product.name == product.name).first()
-    if product_db:
-        raise HTTPException(400, "Такой товар уже есть")
-    product_db = m.Product()
-    product_db.name = product.name
-
-    db.add(product_db)
+    db.add(movie_db)
     db.commit()
-    return product_db
+    return movie_db
 
-@app.get("/student/{student_id}")
-def get_student(student_id: int, db: Session = Depends(get_db)):
-    student = db.query(m.Student).filter(m.Student.id == student_id).first()
-    if not student:
-        raise HTTPException(404, "Студент не найден")
-    return student
-
-@app.post("/student")
-def create_student(student: pyd.CreateStudent, db: Session = Depends(get_db)):
-    student_db=db.query(m.Student).filter(
-        m.Student.name == student.name, 
-        m.Student.last_name == student.last_name,
-        m.Student.age == student.age).first()
-    if student_db:
-        raise HTTPException(400, "Такой студент уже есть")
-    student_db = m.Student()
-    student_db.name = student.name
-    student_db.last_name = student.last_name
-    student_db.age = student.age
-
-    db.add(student_db)
+@app.delete("/movie/{movie_id}")
+def delete_movie(movie_id: int, db: Session = Depends(get_db)):
+    movie = db.query(m.Movie).filter(m.Movie.id == movie_id).first()
+    if not movie:
+        raise HTTPException(404, "Фильм не найден")
+    db.delete(movie)
     db.commit()
-    return student_db
+    return {"msg": "Фильм удален"}
 
-@app.delete("/product/{product_id}")
-def delete_product(product_id: int, db: Session = Depends(get_db)):
-    product = db.query(m.Product).filter(m.Product.id == product_id).first()
-    if not product:
-        raise HTTPException(404, "Товар не найден")
-    db.delete(product)
+@app.post("/movie/poster_image/{movie_id}", response_model=pyd.SchemaMovie)
+def upload_image(movie_id: int, image: UploadFile, db: Session = Depends(get_db)):
+    movie_db = (
+        db.query(models.Movie).filter(models.Movie.id == movie_id).first()
+    )
+    if not movie_db:
+        raise HTTPException(404)
+    if image.content_type not in ("image/png", "image/jpeg"):
+        raise HTTPException(400, "Неверный тип данных")
+    with open(f"files/{image.filename}", "wb") as f:
+        shutil.copyfileobj(image.file, f)
+    movie_db.poster_image = f"files/{image.filename}"
     db.commit()
-    return {"msg": "Товар удален"}
-
-@app.delete("/student/{student_id}")
-def delete_student(student_id: int, db: Session = Depends(get_db)):
-    student = db.query(m.Student).filter(m.Student.id == student_id).first()
-    if not student:
-        raise HTTPException(404, "Студент не найден")
-    db.delete(student)
-    db.commit()
-    return {"msg": "Студент удален"}
-
-@app.get("/products", response_model=List[pyd.SchemaProduct])
-def get_all_products(db:Session=Depends(get_db)):
-    products = db.query(m.Product).all()
-    return products
+    return movie_db

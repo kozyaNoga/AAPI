@@ -1,25 +1,21 @@
-from sqlalchemy import Column, Integer, String, ForeignKey
+from sqlalchemy import Column, Integer, String, ForeignKey, Float
 from database import Base
 from sqlalchemy.orm import relationship
 
-class Product(Base): #N
-    __tablename__="products"
+class Movie(Base):
+    __tablename__ = "movies"
     id = Column(Integer, primary_key=True, autoincrement=True)
-    name = Column(String(255), unique=True)
-    category_id = Column(Integer, ForeignKey("categories.id"))
-    #img = Cloumn
+    name = Column(String(255))
+    primiere = Column(Integer)
+    genre_id = Column(Integer, ForeignKey("genres.id"))
+    duration = Column(Integer)
+    rate = Column(Float)
+    poster_image = Column(String(255), nullable=True)
+    date_added = Column(Integer)
 
-    category = relationship("Category", backref="products")
+    genre = relationship("Genre", backref="movies")
 
-class Student(Base):
-    __tablename__="students"
+class Genre(Base): #1
+    __tablename__ = "genres"
     id = Column(Integer, primary_key=True, autoincrement=True)
-    name = Column(String(255), nullable=False)
-    last_name = Column(String(255), nullable=False)
-    age = Column(Integer, nullable=False)
-
-class Category(Base): #1
-    __tablename__="categories"
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    name = Column(String(255), unique=True)
-
+    name = Column(String(255))

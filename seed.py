@@ -5,16 +5,17 @@ m.Base.metadata.drop_all(bind=engine)
 m.Base.metadata.create_all(bind=engine)
 
 with Session(bind=engine) as session:
-    c1 = m.Category(name="Еда")
-    session.add(c1)
-    p1 = m.Product(name="Молоко", category=c1)
-    session.add(p1)
+    g1 = m.Genre(name="Драма")
+    session.add(g1)
 
+    m1 = m.Movie(
+        name = "Валл-и",
+        primiere = 2008,
+        genre = g1,
+        duration = 192,
+        rate = 8.2,
+        poster_image = "frgrvok",
+        date_added = 2008)
+    session.add(m1)
     session.commit()
-
-    p2 = m.Student(name="Имя", last_name="Фамилия", age=1)
-    session.add(p2)
-
-    session.commit()
-
     

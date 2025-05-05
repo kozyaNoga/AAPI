@@ -7,6 +7,10 @@ from typing import List
 import pyd
 import shutil
 from fastapi.staticfiles import StaticFiles
+from pyd.base_models import BaseUser
+from pyd.create_models import CreateUser
+from auth import basic_auth
+
 app = FastAPI()
 
 @app.get("/movies", response_model=list[pyd.BaseMovie])
@@ -22,7 +26,7 @@ def get_movie(movie_id: int, db: Session = Depends(get_db)):
     return movie
 
 @app.post("/movie")
-def create_movie(movie: pyd.CreateMovie, db: Session = Depends(get_db)):
+def create_movie(movie: pyd.CreateMovie, db: Session = Depends(get_db), user: m.User = Depends(basic_auth)):
     movie_db=db.query(m.Movie).filter(
         m.Movie.name == movie.name, 
         m.Movie.primiere == movie.primiere,
@@ -52,7 +56,7 @@ def create_movie(movie: pyd.CreateMovie, db: Session = Depends(get_db)):
     return movie_db
 
 @app.delete("/movie/{movie_id}")
-def delete_movie(movie_id: int, db: Session = Depends(get_db)):
+def delete_movie(movie_id: int, db: Session = Depends(get_db), user: m.User = Depends(basic_auth)):
     movie = db.query(m.Movie).filter(m.Movie.id == movie_id).first()
     if not movie:
         raise HTTPException(404, "Фильм не найден")
@@ -61,7 +65,7 @@ def delete_movie(movie_id: int, db: Session = Depends(get_db)):
     return {"msg": "Фильм удален"}
 
 @app.post("/movie/poster_image/{movie_id}", response_model=pyd.SchemaMovie)
-def upload_image(movie_id: int, image: UploadFile, db: Session = Depends(get_db)):
+def upload_image(movie_id: int, image: UploadFile, db: Session = Depends(get_db), user: m.User = Depends(basic_auth)):
     movie_db = (
         db.query(models.Movie).filter(models.Movie.id == movie_id).first()
     )
@@ -74,3 +78,20 @@ def upload_image(movie_id: int, image: UploadFile, db: Session = Depends(get_db)
     movie_db.poster_image = f"files/{image.filename}"
     db.commit()
     return movie_db
+
+@app.post("/user", response_model=BaseUser)
+def user_reg(create_user: CreateUser, db: Session = Depends(get_db)):
+    user_db = db.query(m.User).filter(m.User.username == create_user.username).first()
+    if user_db:
+        raise HTTPException(400, "Логин занят")
+    user_db = m.User()
+    user_db.username = create_user.username
+    user_db.password = create_user.password
+    user_db.email = create_user.email
+    db.add(user_db)
+    db.commit()
+    return user_db
+
+@app.get("/test")
+def get_test(user: m.User = Depends(basic_auth)):
+    return {"r": 2}

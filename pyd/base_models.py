@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, EmailStr
 
 class BaseGenre(BaseModel):
     id: int = Field(gt=0)
@@ -13,3 +13,8 @@ class BaseMovie(BaseModel):
     rate: float=Field(gt=0, example=8.9)
     poster_image: str | None
     date_added: int = Field(example = 2025)
+
+class BaseUser(BaseModel):
+    id: int
+    username: str = Field(example="Denis123")
+    email: EmailStr | None = Field(None, example="test@mail.ru")

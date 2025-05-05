@@ -19,3 +19,10 @@ with Session(bind=engine) as session:
     session.add(m1)
     session.commit()
     
+    u1 = m.User(
+        username="Egor",
+        password="123456",
+        email="8egor13@inbox.ru"
+    )
+    session.add(u1)
+    session.commit()

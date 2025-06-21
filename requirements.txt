@@ -1,3 +1,5 @@
 fastapi[standard]
 sqlalchemy
 pydantic-settings
+PyJWT
+passlib
